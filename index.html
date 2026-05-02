@@ -2332,6 +2332,7 @@ function renderPL() {
   // Calculate all category totals per month (needed for formulas)
   const catTotals = {}; // catTotals[catName][month] = value
 
+  // PASO 1: Calcular referencia (ingresos) y datos (egresos por categoría)
   PL_TAXONOMIA.forEach(cat => {
     catTotals[cat.nombre] = {};
     if (cat.tipo === 'separador') {
@@ -2349,7 +2350,23 @@ function renderPL() {
         });
         catTotals[cat.nombre][m] = total;
       }
-    } else if (cat.tipo === 'calculado') {
+    }
+  });
+
+  // PASO 2: Calcular filas del detalle (no resumen) primero
+  PL_TAXONOMIA.forEach(cat => {
+    if (cat.tipo === 'calculado' && !cat.esResumen) {
+      for (let m = 0; m < 12; m++) {
+        const monthData = {};
+        Object.keys(catTotals).forEach(k => { monthData[k] = catTotals[k][m] || 0; });
+        catTotals[cat.nombre][m] = cat.formula(monthData);
+      }
+    }
+  });
+
+  // PASO 3: Calcular filas resumen (Total Egresos, Utilidad Neta) que dependen de datos ya calculados
+  PL_TAXONOMIA.forEach(cat => {
+    if (cat.tipo === 'calculado' && cat.esResumen) {
       for (let m = 0; m < 12; m++) {
         const monthData = {};
         Object.keys(catTotals).forEach(k => { monthData[k] = catTotals[k][m] || 0; });
