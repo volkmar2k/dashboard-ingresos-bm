@@ -865,6 +865,29 @@
       background: rgba(74,222,128,0.08);
     }
 
+    /* Total Egresos row */
+    .pl-row-egresos td {
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--red);
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      white-space: nowrap;
+      background: rgba(248,113,113,0.04);
+    }
+
+    .pl-row-egresos td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: rgba(248,113,113,0.04);
+    }
+
+    .pl-row-egresos td.col-total {
+      background: rgba(248,113,113,0.08);
+    }
+
     /* Negative values */
     .val-negative { color: var(--red) !important; }
 
@@ -2132,6 +2155,8 @@ const PL_MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','N
 
 const PL_TAXONOMIA = [
   { nombre: 'Ingresos', tipo: 'referencia' },
+  { nombre: 'Total Egresos', tipo: 'calculado_especial' },
+  { nombre: 'Resultado (Ingresos - Egresos)', tipo: 'calculado', formula: (d) => d['Ingresos'] - d['Total Egresos'] },
   { nombre: 'Costo de las ventas', tipo: 'datos', tipoHoja: 'Costo de ventas', subcategorias: ['Salarios artistas','Comisiones artistas','Prestaciones sociales','Aportes seguridad social','Compra insumos','Gastos de envío insumos','Gastos cursos presenciales','Disposición de residuos biológicos'] },
   { nombre: 'Utilidad bruta', tipo: 'calculado', formula: (d) => d['Ingresos'] - d['Costo de las ventas'] },
   { nombre: 'Gastos de venta', tipo: 'datos', tipoHoja: 'Gastos de ventas', subcategorias: ['Salarios comerciales','Comisiones comerciales','Prestaciones sociales','Aportes seguridad social','Honorarios lider comercial','Pautas publicitarias','Honorarios Marketing','Honorarios diseñador','Honorarios Fotógrafo'] },
@@ -2267,6 +2292,17 @@ function renderPL() {
         });
         catTotals[cat.nombre][m] = total;
       }
+    } else if (cat.tipo === 'calculado_especial') {
+      // Total Egresos = sum of ALL egresos for the month
+      for (let m = 0; m < 12; m++) {
+        let total = 0;
+        datosEgresos.forEach(r => {
+          if (r.fecha.getFullYear() === year && r.fecha.getMonth() === m) {
+            total += r.egreso;
+          }
+        });
+        catTotals[cat.nombre][m] = total;
+      }
     } else if (cat.tipo === 'calculado') {
       for (let m = 0; m < 12; m++) {
         const monthData = {};
@@ -2283,7 +2319,14 @@ function renderPL() {
   PL_TAXONOMIA.forEach(cat => {
     const isExpanded = plExpandedCategories[cat.nombre] || false;
     const hasChildren = cat.tipo === 'datos';
-    const rowClass = cat.tipo === 'calculado' ? 'pl-row-calc' : cat.tipo === 'referencia' ? 'pl-row-ref' : 'pl-row-category';
+    let rowClass;
+    if (cat.tipo === 'calculado' || cat.tipo === 'calculado_especial') {
+      rowClass = cat.tipo === 'calculado_especial' ? 'pl-row-egresos' : 'pl-row-calc';
+    } else if (cat.tipo === 'referencia') {
+      rowClass = 'pl-row-ref';
+    } else {
+      rowClass = 'pl-row-category';
+    }
 
     // Category row
     let yearTotal = 0;
