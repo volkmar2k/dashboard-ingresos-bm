@@ -867,8 +867,8 @@
 
     /* Total Egresos row */
     .pl-row-egresos td {
-      padding: 12px 14px;
-      font-size: 13px;
+      padding: 14px 14px;
+      font-size: 15px;
       font-weight: 700;
       color: var(--red);
       border-bottom: 1px solid var(--border);
@@ -886,6 +886,60 @@
 
     .pl-row-egresos td.col-total {
       background: rgba(248,113,113,0.08);
+    }
+
+    /* Summary Ingresos row (larger) */
+    .pl-row-ref-summary td {
+      padding: 14px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      white-space: nowrap;
+      background: rgba(74,222,128,0.04);
+    }
+
+    .pl-row-ref-summary td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: rgba(74,222,128,0.04);
+    }
+
+    .pl-row-ref-summary td.col-total {
+      background: rgba(74,222,128,0.08);
+    }
+
+    /* Summary Utilidad Neta row */
+    .pl-row-resultado td {
+      padding: 14px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent-light);
+      border-bottom: 2px solid var(--accent);
+      text-align: right;
+      white-space: nowrap;
+      background: rgba(201,169,110,0.06);
+    }
+
+    .pl-row-resultado td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: rgba(201,169,110,0.06);
+    }
+
+    .pl-row-resultado td.col-total {
+      background: rgba(201,169,110,0.12);
+      color: var(--accent);
+    }
+
+    /* Separador row */
+    .pl-row-separador td {
+      padding: 10px 0;
+      border: none;
+      background: transparent;
     }
 
     /* Negative values */
@@ -2154,19 +2208,20 @@ let plExpandedCategories = {};
 const PL_MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 const PL_TAXONOMIA = [
-  { nombre: 'Ingresos', tipo: 'referencia' },
-  { nombre: 'Total Egresos', tipo: 'calculado_especial' },
-  { nombre: 'Resultado (Ingresos - Egresos)', tipo: 'calculado', formula: (d) => d['Ingresos'] - d['Total Egresos'] },
+  { nombre: 'Total Ingresos', tipo: 'referencia', esResumen: true },
+  { nombre: 'Total Egresos', tipo: 'calculado', esResumen: true, formula: (d) => (d['Costo de las ventas']||0) + (d['Gastos de venta']||0) + (d['Gastos administrativos']||0) + (d['Gastos financieros']||0) + (d['Impuestos']||0) },
+  { nombre: 'Utilidad Neta', tipo: 'calculado', esResumen: true, formula: (d) => (d['Total Ingresos']||0) - (d['Total Egresos']||0) },
+  { nombre: '_separador', tipo: 'separador' },
   { nombre: 'Costo de las ventas', tipo: 'datos', tipoHoja: 'Costo de ventas', subcategorias: ['Salarios artistas','Comisiones artistas','Prestaciones sociales','Aportes seguridad social','Compra insumos','Gastos de envío insumos','Gastos cursos presenciales','Disposición de residuos biológicos'] },
-  { nombre: 'Utilidad bruta', tipo: 'calculado', formula: (d) => d['Ingresos'] - d['Costo de las ventas'] },
+  { nombre: 'Utilidad bruta', tipo: 'calculado', formula: (d) => (d['Total Ingresos']||0) - (d['Costo de las ventas']||0) },
   { nombre: 'Gastos de venta', tipo: 'datos', tipoHoja: 'Gastos de ventas', subcategorias: ['Salarios comerciales','Comisiones comerciales','Prestaciones sociales','Aportes seguridad social','Honorarios lider comercial','Pautas publicitarias','Honorarios Marketing','Honorarios diseñador','Honorarios Fotógrafo'] },
   { nombre: 'Gastos administrativos', tipo: 'datos', tipoHoja: 'Gastos administrativos', subcategorias: ['Salarios administrativos','Prestaciones sociales','Aportes seguridad social','Honorarios administrativos','Bonificaciones','Dotación','Honorarios Contador','Honorarios Abogado','Compra y reposición de equipos (activos)','Alquiler oficina','Mantenimiento de oficina, enseres y muebles','Servicios Públicos','Internet','Líneas de celular','Seguros','Servicio de aseo','Artículos de aseo','Papelería','Cafetería','Membresías y suscripciones','Entrenamientos & Congresos','Gastos de representación','Gastos de contratación empleados','Regalos clientes','Fiestas y regalos empleados'] },
-  { nombre: 'Gastos operativos', tipo: 'calculado', formula: (d) => d['Gastos de venta'] + d['Gastos administrativos'] },
-  { nombre: 'Utilidad operativa', tipo: 'calculado', formula: (d) => d['Utilidad bruta'] - d['Gastos operativos'] },
+  { nombre: 'Gastos operativos', tipo: 'calculado', formula: (d) => (d['Gastos de venta']||0) + (d['Gastos administrativos']||0) },
+  { nombre: 'Utilidad operativa', tipo: 'calculado', formula: (d) => (d['Utilidad bruta']||0) - (d['Gastos operativos']||0) },
   { nombre: 'Gastos financieros', tipo: 'datos', tipoHoja: 'Gastos financieros', subcategorias: ['Pago deudas acreedores','Intereses de créditos','Comisiones bancarias'] },
-  { nombre: 'Utilidad antes de impuestos', tipo: 'calculado', formula: (d) => d['Utilidad operativa'] - d['Gastos financieros'] },
+  { nombre: 'Utilidad antes de impuestos', tipo: 'calculado', formula: (d) => (d['Utilidad operativa']||0) - (d['Gastos financieros']||0) },
   { nombre: 'Impuestos', tipo: 'datos', tipoHoja: 'Impuestos', subcategorias: ['Impuesto'] },
-  { nombre: 'Utilidad neta', tipo: 'calculado', formula: (d) => d['Utilidad antes de impuestos'] - d['Impuestos'] }
+  { nombre: 'Utilidad neta (detalle)', tipo: 'calculado', formula: (d) => (d['Utilidad antes de impuestos']||0) - (d['Impuestos']||0) }
 ];
 
 async function cargarDatosEgresos() {
@@ -2279,7 +2334,9 @@ function renderPL() {
 
   PL_TAXONOMIA.forEach(cat => {
     catTotals[cat.nombre] = {};
-    if (cat.tipo === 'referencia') {
+    if (cat.tipo === 'separador') {
+      for (let m = 0; m < 12; m++) { catTotals[cat.nombre][m] = 0; }
+    } else if (cat.tipo === 'referencia') {
       for (let m = 0; m < 12; m++) {
         catTotals[cat.nombre][m] = ingresosPorMes[m] || 0;
       }
@@ -2289,17 +2346,6 @@ function renderPL() {
         cat.subcategorias.forEach(sub => {
           const compoundKey = cat.tipoHoja + '||' + sub;
           total += (egresosPorTipoSubMes[compoundKey] && egresosPorTipoSubMes[compoundKey][m]) || 0;
-        });
-        catTotals[cat.nombre][m] = total;
-      }
-    } else if (cat.tipo === 'calculado_especial') {
-      // Total Egresos = sum of ALL egresos for the month
-      for (let m = 0; m < 12; m++) {
-        let total = 0;
-        datosEgresos.forEach(r => {
-          if (r.fecha.getFullYear() === year && r.fecha.getMonth() === m) {
-            total += r.egreso;
-          }
         });
         catTotals[cat.nombre][m] = total;
       }
@@ -2320,8 +2366,17 @@ function renderPL() {
     const isExpanded = plExpandedCategories[cat.nombre] || false;
     const hasChildren = cat.tipo === 'datos';
     let rowClass;
-    if (cat.tipo === 'calculado' || cat.tipo === 'calculado_especial') {
-      rowClass = cat.tipo === 'calculado_especial' ? 'pl-row-egresos' : 'pl-row-calc';
+    if (cat.tipo === 'separador') {
+      html += `<tr class="pl-row-separador"><td colspan="14"></td></tr>`;
+      return;
+    } else if (cat.esResumen && cat.tipo === 'referencia') {
+      rowClass = 'pl-row-ref-summary';
+    } else if (cat.esResumen && cat.nombre === 'Total Egresos') {
+      rowClass = 'pl-row-egresos';
+    } else if (cat.esResumen && cat.nombre === 'Utilidad Neta') {
+      rowClass = 'pl-row-resultado';
+    } else if (cat.tipo === 'calculado') {
+      rowClass = 'pl-row-calc';
     } else if (cat.tipo === 'referencia') {
       rowClass = 'pl-row-ref';
     } else {
