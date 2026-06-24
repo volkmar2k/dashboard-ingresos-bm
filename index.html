@@ -1774,6 +1774,7 @@ function renderKPIs() {
   let totalHoy = 0, countHoy = 0;
   let totalSemana = 0, countSemana = 0;
   let totalMes = 0, countMes = 0;
+  let totalMesSinCursos = 0;
 
   datosCompletos.forEach(r => {
     const f = r.fecha;
@@ -1785,6 +1786,9 @@ function renderKPIs() {
     }
     if (f >= inicioMes && f <= hoy) {
       totalMes += r.ingreso; countMes++;
+      if (r.categoria !== 'Cursos presenciales') {
+        totalMesSinCursos += r.ingreso;
+      }
     }
   });
 
@@ -1794,8 +1798,8 @@ function renderKPIs() {
   const diasHabilesTotalMes = contarDiasHabiles(inicioMes, finMes, festivos);
   const diasHabilesRestantes = diasHabilesTotalMes - diasHabilesTranscurridos;
 
-  const promedioDiario = diasHabilesTranscurridos > 0 ? totalMes / diasHabilesTranscurridos : 0;
-  const proyeccion = totalMes + (diasHabilesRestantes * promedioDiario);
+  const promedioDiario = diasHabilesTranscurridos > 0 ? totalMesSinCursos / diasHabilesTranscurridos : 0;
+  const proyeccion = totalMesSinCursos + (diasHabilesRestantes * promedioDiario);
 
   document.getElementById('kpiTotal').textContent = formatMoney(total);
   document.getElementById('kpiTotalSub').textContent = `${count.toLocaleString('es-CO')} transacciones`;
@@ -1806,9 +1810,9 @@ function renderKPIs() {
   document.getElementById('kpiMes').textContent = formatMoney(totalMes);
   document.getElementById('kpiMesSub').textContent = `${countMes} servicios`;
   document.getElementById('kpiPromDiario').textContent = formatMoney(promedioDiario);
-  document.getElementById('kpiPromDiarioSub').textContent = `${diasHabilesTranscurridos} de ${diasHabilesTotalMes} días hábiles`;
+  document.getElementById('kpiPromDiarioSub').textContent = `${diasHabilesTranscurridos} de ${diasHabilesTotalMes} días hábiles · Excl. cursos presenciales`;
   document.getElementById('kpiProyeccion').textContent = formatMoney(proyeccion);
-  document.getElementById('kpiProyeccionSub').textContent = `${diasHabilesRestantes} días hábiles restantes`;
+  document.getElementById('kpiProyeccionSub').textContent = `${diasHabilesRestantes} días hábiles restantes · Excl. cursos presenciales`;
 }
 
 // ═══════════════════════════════════════════
