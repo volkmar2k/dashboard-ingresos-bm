@@ -1159,14 +1159,14 @@
           <div class="kpi-sub" id="kpiMesSub"></div>
         </div>
         <div class="kpi-card fade-in" style="animation-delay:0.25s">
-          <div class="kpi-label">Servicios Realizados</div>
-          <div class="kpi-value" id="kpiServicios">--</div>
-          <div class="kpi-sub" id="kpiServiciosSub"></div>
+          <div class="kpi-label">Promedio Diario Mes en Curso</div>
+          <div class="kpi-value" id="kpiPromDiario">--</div>
+          <div class="kpi-sub" id="kpiPromDiarioSub"></div>
         </div>
         <div class="kpi-card fade-in" style="animation-delay:0.3s">
-          <div class="kpi-label">Clientes Únicos</div>
-          <div class="kpi-value" id="kpiClientes">--</div>
-          <div class="kpi-sub" id="kpiClientesSub"></div>
+          <div class="kpi-label">Proyección Cierre de Mes</div>
+          <div class="kpi-value gold" id="kpiProyeccion">--</div>
+          <div class="kpi-sub" id="kpiProyeccionSub"></div>
         </div>
       </section>
 
@@ -1667,17 +1667,109 @@ function formatMoney(n) {
   return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+// ═══════════════════════════════════════════
+// DÍAS HÁBILES COLOMBIA (Lun-Sáb, excluyendo festivos)
+// ═══════════════════════════════════════════
+function calcularPascua(year) {
+  // Algoritmo de Butcher para calcular Domingo de Pascua
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, mes - 1, dia);
+}
+
+function siguienteLunes(fecha) {
+  const d = new Date(fecha);
+  const dia = d.getDay();
+  if (dia === 1) return d; // Ya es lunes
+  const diff = dia === 0 ? 1 : (8 - dia);
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function festivosColombia(year) {
+  const festivos = new Set();
+  const addFestivo = (d) => festivos.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+
+  // Fijos
+  addFestivo(new Date(year, 0, 1));   // Año Nuevo
+  addFestivo(new Date(year, 4, 1));   // Día del Trabajo
+  addFestivo(new Date(year, 6, 20));  // Independencia
+  addFestivo(new Date(year, 7, 7));   // Batalla de Boyacá
+  addFestivo(new Date(year, 11, 8));  // Inmaculada Concepción
+  addFestivo(new Date(year, 11, 25)); // Navidad
+
+  // Emiliani (se mueven al lunes siguiente)
+  addFestivo(siguienteLunes(new Date(year, 0, 6)));   // Reyes Magos
+  addFestivo(siguienteLunes(new Date(year, 2, 19)));  // San José
+  addFestivo(siguienteLunes(new Date(year, 5, 29)));  // San Pedro y San Pablo
+  addFestivo(siguienteLunes(new Date(year, 7, 15)));  // Asunción
+  addFestivo(siguienteLunes(new Date(year, 9, 12)));  // Día de la Raza
+  addFestivo(siguienteLunes(new Date(year, 10, 1)));  // Todos los Santos
+  addFestivo(siguienteLunes(new Date(year, 10, 11))); // Independencia de Cartagena
+
+  // Basados en Pascua
+  const pascua = calcularPascua(year);
+  const jueves = new Date(pascua); jueves.setDate(pascua.getDate() - 3);
+  const viernes = new Date(pascua); viernes.setDate(pascua.getDate() - 2);
+  addFestivo(jueves);  // Jueves Santo
+  addFestivo(viernes); // Viernes Santo
+
+  const ascension = new Date(pascua); ascension.setDate(pascua.getDate() + 39);
+  addFestivo(siguienteLunes(ascension)); // Ascensión
+
+  const corpus = new Date(pascua); corpus.setDate(pascua.getDate() + 60);
+  addFestivo(siguienteLunes(corpus)); // Corpus Christi
+
+  const sagrado = new Date(pascua); sagrado.setDate(pascua.getDate() + 68);
+  addFestivo(siguienteLunes(sagrado)); // Sagrado Corazón
+
+  return festivos;
+}
+
+function esDiaHabil(fecha, festivos) {
+  const dia = fecha.getDay();
+  if (dia === 0) return false; // Domingo
+  const key = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
+  if (festivos.has(key)) return false; // Festivo
+  return true;
+}
+
+function contarDiasHabiles(desde, hasta, festivos) {
+  let count = 0;
+  const d = new Date(desde);
+  d.setHours(0,0,0,0);
+  const fin = new Date(hasta);
+  fin.setHours(0,0,0,0);
+  while (d <= fin) {
+    if (esDiaHabil(d, festivos)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
 function renderKPIs() {
   const total = datosFiltrados.reduce((s, r) => s + r.ingreso, 0);
   const count = datosFiltrados.length;
-  const clientes = new Set(datosFiltrados.map(r => r.cliente)).size;
 
-  // Hoy, semana, mes - calculados sobre datosCompletos (sin filtros de período/categoría)
+  // Hoy, semana, mes - calculados sobre datosCompletos
   const hoy = new Date();
   const inicioSemana = new Date(hoy);
-  inicioSemana.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1)); // Lunes
+  inicioSemana.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1));
   inicioSemana.setHours(0,0,0,0);
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); // Último día del mes
 
   let totalHoy = 0, countHoy = 0;
   let totalSemana = 0, countSemana = 0;
@@ -1696,6 +1788,15 @@ function renderKPIs() {
     }
   });
 
+  // Días hábiles Colombia (Lun-Sáb, sin festivos)
+  const festivos = festivosColombia(hoy.getFullYear());
+  const diasHabilesTranscurridos = contarDiasHabiles(inicioMes, hoy, festivos);
+  const diasHabilesTotalMes = contarDiasHabiles(inicioMes, finMes, festivos);
+  const diasHabilesRestantes = diasHabilesTotalMes - diasHabilesTranscurridos;
+
+  const promedioDiario = diasHabilesTranscurridos > 0 ? totalMes / diasHabilesTranscurridos : 0;
+  const proyeccion = totalMes + (diasHabilesRestantes * promedioDiario);
+
   document.getElementById('kpiTotal').textContent = formatMoney(total);
   document.getElementById('kpiTotalSub').textContent = `${count.toLocaleString('es-CO')} transacciones`;
   document.getElementById('kpiHoy').textContent = formatMoney(totalHoy);
@@ -1704,10 +1805,10 @@ function renderKPIs() {
   document.getElementById('kpiSemanaSub').textContent = `${countSemana} servicios`;
   document.getElementById('kpiMes').textContent = formatMoney(totalMes);
   document.getElementById('kpiMesSub').textContent = `${countMes} servicios`;
-  document.getElementById('kpiServicios').textContent = count.toLocaleString('es-CO');
-  document.getElementById('kpiServiciosSub').textContent = `${new Set(datosFiltrados.map(r => r.servicio)).size} tipos distintos`;
-  document.getElementById('kpiClientes').textContent = clientes.toLocaleString('es-CO');
-  document.getElementById('kpiClientesSub').textContent = 'clientes atendidos';
+  document.getElementById('kpiPromDiario').textContent = formatMoney(promedioDiario);
+  document.getElementById('kpiPromDiarioSub').textContent = `${diasHabilesTranscurridos} de ${diasHabilesTotalMes} días hábiles`;
+  document.getElementById('kpiProyeccion').textContent = formatMoney(proyeccion);
+  document.getElementById('kpiProyeccionSub').textContent = `${diasHabilesRestantes} días hábiles restantes`;
 }
 
 // ═══════════════════════════════════════════
