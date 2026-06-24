@@ -1799,7 +1799,7 @@ function renderKPIs() {
   const diasHabilesRestantes = diasHabilesTotalMes - diasHabilesTranscurridos;
 
   const promedioDiario = diasHabilesTranscurridos > 0 ? totalMesSinCursos / diasHabilesTranscurridos : 0;
-  const proyeccion = totalMesSinCursos + (diasHabilesRestantes * promedioDiario);
+  const proyeccion = totalMes + (diasHabilesRestantes * promedioDiario);
 
   document.getElementById('kpiTotal').textContent = formatMoney(total);
   document.getElementById('kpiTotalSub').textContent = `${count.toLocaleString('es-CO')} transacciones`;
